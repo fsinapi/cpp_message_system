@@ -17,6 +17,10 @@ concept MsgQueue = requires(Q queue, Q::Message msg) {
     { queue.try_read() } -> std::same_as<std::optional<typename Q::Message>>;
 };
 
+
+template<typename Queue>
+struct MsgTag { };
+
 /**
  * @brief Class to encapsulate a tasklist. This class functions as a central
  * mail-forwarding system in essence, redirecting messages to their 
@@ -27,10 +31,10 @@ concept MsgQueue = requires(Q queue, Q::Message msg) {
 template<MsgQueue... MessageQueues>
 class Tasks {
   public:
-    using MessageTypes = 
-        std::variant<typename MessageQueues::Message...>;
+    using QueueTypes = 
+        std::variant<typename MessageQueues::Tag...>;
     
-    static constexpr size_t TaskCount = std::variant_size_v<MessageTypes>;
+    static constexpr size_t TaskCount = std::variant_size_v<QueueTypes>;
 
     Tasks() :
         _handles(),
@@ -43,16 +47,15 @@ class Tasks {
      * @tparam Queue Type of the message queue
      * @param queue Handle to the queue
      */
-    template<size_t Idx, MsgQueue Queue>
+    template<MsgQueue Queue>
     auto register_queue(Queue &queue) -> void {
-        static_assert(Idx < TaskCount,
-            "Invalid task index");
-        if(_initialized.at(Idx)) {
+        constexpr auto idx = get_task_idx<Queue>();
+        if(_initialized.at(idx)) {
             // Error
             std::__throw_bad_exception();
         }
-        std::get<Idx>(_handles) = &queue;
-        _initialized.at(Idx) = true;
+        std::get<idx>(_handles) = &queue;
+        _initialized.at(idx) = true;
     }
     
     /**
@@ -61,9 +64,10 @@ class Tasks {
      * @tparam Message The type of the message
      * @return size_t A unique index for this message type
      */
-    template<typename Message>
+    template<typename Queue>
     constexpr static auto get_task_idx() -> size_t {
-        return MessageTypes(Message()).index();
+        using Tag = typename Queue::Tag;
+        return QueueTypes((Tag())).index();
     }
 
     /**
@@ -94,14 +98,16 @@ class Tasks {
      * @param msg The message to send
      * @return true if the message could be sent, false otherwise
      */
-    template<typename Message>
-    auto send(const Message& msg) -> bool {
-        constexpr auto idx = get_task_idx<Message>();
+    template<typename Tag, typename Message>
+    auto send(const Message& msg, const Tag& tag = (Tag())) -> bool {
+        static_cast<void>(tag);
+        constexpr auto idx = get_task_idx<Tag>();
         return send_to<idx>(msg);
     }
 
   private:
     // Handle for each of the tasks
+    // Replace ptr with struct holding ptr
     std::tuple<MessageQueues*...> _handles;
     // Array mapping whether a task handle is initialized
     std::array<std::atomic_bool, TaskCount> _initialized;

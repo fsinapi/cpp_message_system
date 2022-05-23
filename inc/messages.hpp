@@ -20,7 +20,7 @@ struct Message3 {
 
 using Task1Message = std::variant<std::monostate, Message1, Message2>;
 using Task2Message = std::variant<std::monostate, Message2, Message3>;
+using Task3Message = std::variant<std::monostate, Message2, Message3>;
 
-using Messages = std::variant<Task1Message, Task2Message>;
 
 }; 

@@ -8,10 +8,13 @@
 
 namespace message_queue {
 
-template<typename T>
+template<typename T, size_t I = 0>
 class MessageQueue {
   public:
     using Message = T;
+    static constexpr size_t index = I;
+    struct Tag{};
+    
     MessageQueue() : _queue() {}
 
     auto send(const Message& msg) -> void {
@@ -34,5 +37,6 @@ class MessageQueue {
   private:
     std::deque<Message> _queue;
 };
+
 
 };

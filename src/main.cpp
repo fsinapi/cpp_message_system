@@ -3,10 +3,12 @@
 #include "my_tasks.hpp"
 using namespace message_queue;
 using namespace messages;
+using namespace mytasks;
 
 auto main() -> int {
     MessageQueue<Task1Message> queue_1;
-    MessageQueue<Task2Message> queue_2;
+    Queue2 queue_2;
+    Queue3 queue_3;
 
     auto tasklist = MyTasks();
 
@@ -16,23 +18,21 @@ auto main() -> int {
         std::endl;
 
     // Register the queues
-    tasklist.register_queue<TaskIndex::Task1>(queue_1);
-    tasklist.register_queue<TaskIndex::Task2>(queue_2);
+    tasklist.register_queue(queue_1);
+    tasklist.register_queue(queue_2);
+    tasklist.register_queue(queue_3);
 
     // Can't register multiple times
     try {
-        tasklist.register_queue<TaskIndex::Task2>(queue_2);
+        tasklist.register_queue(queue_2);
     } catch(std::bad_exception &e) {
         std::cout << "Tried to set same queue twice: " << e.what() << std::endl;
     }
 
-    std::cout << "Queue1 index: " 
-        << TaskIndex::Task1
-        << std::endl;
     std::cout << "Queue2 index: " 
-        << MyTasks::get_task_idx<Task2Message>() 
+        << MyTasks::get_task_idx<Queue2>() 
         << std::endl;
-
+#if 0
     // Send message to Queue 1
     tasklist.send_to<TaskIndex::Task1>(Message1{.id=505});
 
@@ -61,10 +61,9 @@ auto main() -> int {
         auto val = std::get<Message1>(msg).id;
         std::cout << "Message 3 value: " << val << std::endl;
     }
-
-    // If a message is in multiple messsage definitions, must
-    // disambiguate with a variant constructor
-    tasklist.send(Task2Message(Message2{.id=1, .payload=2}));
+#endif 
+    // works good
+    tasklist.send<Queue2::Tag>((Message2{.id=1, .payload=2}));
 
     return 0;
 }
